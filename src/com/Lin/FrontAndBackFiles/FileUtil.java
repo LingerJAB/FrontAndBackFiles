@@ -1,9 +1,12 @@
+package com.Lin.FrontAndBackFiles;
+
 import org.apache.commons.codec.digest.DigestUtils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 public class FileUtil {
 
@@ -56,14 +59,24 @@ public class FileUtil {
             byte[] frontAllBytes = frontInputStream.readAllBytes();
 
             targetStream.write(frontAllBytes);
+
+//            System.out.print("front:");
+//            System.out.println(Arrays.toString(frontAllBytes));
+
+            targetStream.write(124); // 分隔符：|
             targetStream.close();
             frontInputStream.close();
 
             targetStream = new FileOutputStream(targetFile, true);
             FileInputStream backStream = new FileInputStream(backFile);
             byte[] backAllBytes = backStream.readAllBytes();
+
+//            System.out.print("back:");
+//            System.out.println(Arrays.toString(backAllBytes));
+
             reverseBytes(backAllBytes);
 
+            targetStream.write(124); // 分隔符：|
             targetStream.write(backAllBytes);
             backStream.close();
             targetStream.close();
@@ -94,5 +107,66 @@ public class FileUtil {
         }
     }
 
+    /**
+     * 拆分合并后的文件到两个文件
+     * 时间复杂度：O(2n) n为file的字节大小
+     *
+     * @param file        合并后的文件
+     * @param targetFront 正面文件
+     * @param targetBack  反面文件
+     * @author Lin
+     */
+    public static void divideFile(File targetFront, File targetBack,File file) {
+        try {
+            FileInputStream inputStream = new FileInputStream(file);
+            FileOutputStream frontStream = new FileOutputStream(targetFront);
+            FileOutputStream backStream = new FileOutputStream(targetBack);
+
+            byte[] allBytes = inputStream.readAllBytes();
+            inputStream.close();
+
+            int head = 0;
+            int back = allBytes.length - 1;
+            byte headByte = allBytes[head];
+            byte backByte = allBytes[back];
+            System.out.println("len:"+allBytes.length);
+            while(back>head) {
+                if(headByte==124) {
+                    while(backByte!=124) {
+                        System.out.println("head:"+head);
+                        backStream.write(backByte);
+                        backByte = allBytes[--back];
+                    }
+                    break;
+                } else if(backByte==124) { // 124 为 “|”
+                    System.out.println("back:"+back);
+                    while(headByte!=124) {
+                        frontStream.write(headByte);
+                        headByte = allBytes[++head];
+                    }
+                    break;
+                } else {
+                    frontStream.write(headByte);
+                    backStream.write(backByte);
+                }
+                headByte = allBytes[++head];
+                backByte = allBytes[--back];
+            }
+            frontStream.close();
+            backStream.close();
+        } catch(IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+//    public static void divideFileRe(File file, File targetFront, File targetBack) {
+//        try {
+//            FileInputStream inputStream = new FileInputStream(file);
+//            List list = Arrays.asList(inputStream.readAllBytes());
+//
+//
+//        }catch(IOException e){
+//            e.printStackTrace();
+//        }
+//    }
 
 }
