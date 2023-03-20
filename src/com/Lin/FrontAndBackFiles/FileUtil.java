@@ -196,7 +196,7 @@ public class FileUtil {
      * 打印字节符号
      * @param file 字节文件
      */
-    public static void showBytes(File file) {
+    public static void printBytes(File file) {
         try {
             FileInputStream stream = new FileInputStream(file);
             byte[] allBytes = stream.readAllBytes();
