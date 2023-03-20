@@ -10,6 +10,11 @@ import java.util.Arrays;
 
 public class FileUtil {
 
+    //分割标记  {'|','|','|','|','|'}
+    //若文件损坏请加长数组
+    private static final byte[] MARK={124,124,124,124,124};
+
+
     /**
      * 将 Byte[] 字节数组反转过来,且返回新的数组
      *
@@ -52,6 +57,7 @@ public class FileUtil {
      * @author Lin
      */
     public static void mergeFile(File frontFile, File backFile, File targetFile) {
+        long time= System.currentTimeMillis();
         try {
             if(!targetFile.exists()) targetFile.createNewFile();
             FileOutputStream targetStream = new FileOutputStream(targetFile);
@@ -59,11 +65,7 @@ public class FileUtil {
             byte[] frontAllBytes = frontInputStream.readAllBytes();
 
             targetStream.write(frontAllBytes);
-
-//            System.out.print("front:");
-//            System.out.println(Arrays.toString(frontAllBytes));
-
-            targetStream.write(124); // 分隔符：|
+            targetStream.write(MARK); // 分隔符：|
             targetStream.close();
             frontInputStream.close();
 
@@ -71,16 +73,14 @@ public class FileUtil {
             FileInputStream backStream = new FileInputStream(backFile);
             byte[] backAllBytes = backStream.readAllBytes();
 
-//            System.out.print("back:");
-//            System.out.println(Arrays.toString(backAllBytes));
-
             reverseBytes(backAllBytes);
 
-            targetStream.write(124); // 分隔符：|
+            targetStream.write(MARK); // 分隔符：|
             targetStream.write(backAllBytes);
             backStream.close();
             targetStream.close();
 
+            System.out.printf("%s 合并成功！  用时%dms\n", targetFile.getName(), System.currentTimeMillis() - time);
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -93,7 +93,7 @@ public class FileUtil {
      * @author Lin
      */
     public static void reverseFile(File file) {
-
+        long time= System.currentTimeMillis();
         try {
             FileInputStream inputStream = new FileInputStream(file);
             byte[] allBytes = inputStream.readAllBytes();
@@ -102,6 +102,7 @@ public class FileUtil {
 
             outputStream.close();
             inputStream.close();
+            System.out.printf("%s 转换成功！  用时%dms\n", file.getName(), System.currentTimeMillis() - time);
         } catch(IOException e) {
             e.printStackTrace();
         }
@@ -109,64 +110,100 @@ public class FileUtil {
 
     /**
      * 拆分合并后的文件到两个文件
-     * 时间复杂度：O(2n) n为file的字节大小
+     * 时间复杂度：O(n^2+2n) n为file的字节大小
      *
      * @param file        合并后的文件
      * @param targetFront 正面文件
      * @param targetBack  反面文件
      * @author Lin
      */
-    public static void divideFile(File targetFront, File targetBack,File file) {
+    //TODO 多线程
+    public static void divideFile(File targetFront, File targetBack, File file) {
+        long time= System.currentTimeMillis();
         try {
             FileInputStream inputStream = new FileInputStream(file);
             FileOutputStream frontStream = new FileOutputStream(targetFront);
             FileOutputStream backStream = new FileOutputStream(targetBack);
 
+            // 文件分割解析
             byte[] allBytes = inputStream.readAllBytes();
+            int markHead = kmpSearch(allBytes, MARK);
+            int markTail=markHead+2*MARK.length-1;
+
+            // 结果写入
+            for(int i = 0; i<markHead; i++) frontStream.write(allBytes[i]);
+            for(int i = allBytes.length-1; i>markTail; i--) backStream.write(allBytes[i]);
+
+            backStream.close();
+            frontStream.close();
             inputStream.close();
 
-            int head = 0;
-            int back = allBytes.length - 1;
-            byte headByte = allBytes[head];
-            byte backByte = allBytes[back];
-            System.out.println("len:"+allBytes.length);
-            while(back>head) {
-                if(headByte==124) {
-                    while(backByte!=124) {
-                        System.out.println("head:"+head);
-                        backStream.write(backByte);
-                        backByte = allBytes[--back];
-                    }
-                    break;
-                } else if(backByte==124) { // 124 为 “|”
-                    System.out.println("back:"+back);
-                    while(headByte!=124) {
-                        frontStream.write(headByte);
-                        headByte = allBytes[++head];
-                    }
-                    break;
-                } else {
-                    frontStream.write(headByte);
-                    backStream.write(backByte);
-                }
-                headByte = allBytes[++head];
-                backByte = allBytes[--back];
-            }
-            frontStream.close();
-            backStream.close();
+            System.out.printf("%s 分离成功！  用时%dms\n", file.getName(), System.currentTimeMillis() - time);
         } catch(IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
-//    public static void divideFileRe(File file, File targetFront, File targetBack) {
-//        try {
-//            FileInputStream inputStream = new FileInputStream(file);
-//            List list = Arrays.asList(inputStream.readAllBytes());
-//
-//
-//        }catch(IOException e){
-//            e.printStackTrace();
-//        }
-//    }
 
+
+    /**
+     * KMP搜索子数组算法
+     * @param bytes 原数组
+     * @param pattern 搜寻数组
+     * @return 子数组索引
+     */
+    private static int kmpSearch(byte[] bytes,byte[] pattern){
+        //初始化next数组
+        int[] next1 = new int[pattern.length];
+        next1[0] = -1;
+        int i1 = 0;
+        int j1 = -1;
+        //获取匹配表
+        while(i1< pattern.length - 1){
+            if(j1== -1 || pattern[i1] == pattern[j1]){
+                i1++;
+                j1++;
+                //如果当前字符相同，则next[i] = next[j]
+                if(pattern[i1] == pattern[j1]){
+                    next1[i1] = next1[j1];
+                }else{
+                    next1[i1] = j1;
+                }
+            }else{
+                j1 = next1[j1];
+            }
+        }
+        int i = 0;
+        int j = 0;
+        //遍历查找
+        while(i < bytes.length && j < pattern.length){
+            if(j == -1 || bytes[i] == pattern[j]){
+                i++;
+                j++;
+            }else{
+                //查找失败，查找匹配表
+                j = next1[j];
+            }
+        }
+        //匹配成功
+        if(j == pattern.length){
+            return i - j;
+        }else{
+            return -1;
+        }
+    }
+
+    /**
+     * 打印字节符号
+     * @param file 字节文件
+     */
+    public static void showBytes(File file) {
+        try {
+            FileInputStream stream = new FileInputStream(file);
+            byte[] allBytes = stream.readAllBytes();
+            stream.close();
+            System.out.println(Arrays.toString(allBytes));
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+    }
 }

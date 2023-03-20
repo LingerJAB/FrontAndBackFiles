@@ -5,24 +5,29 @@ import java.io.IOException;
 
 
 public class Main {
-    public static void main(String[] args) throws IOException {
-        String frontName = "avatar1.jpg";
-        String backName = "avatar2.jpg";
-        String targetName = "result.jpg";
+    public static void main(String[] args) {
+        String frontName = "img1.png";
+        String backName = "img2.png";
+        String targetName = "result.png";
 
-        String frontPath = new File(".").getCanonicalPath() + "/src/" + frontName;
-        String backPath = new File(".").getCanonicalPath() + "/src/" + backName;
-        String targetPath = new File(".").getCanonicalPath() + "/src/" + targetName;
+        String frontPath = getLocalFilePath(frontName);
+        String backPath = getLocalFilePath(backName);
+        String targetPath = getLocalFilePath(targetName);
         File frontFile = new File(frontPath), backFile = new File(backPath), targetFile = new File(targetPath);
 
 //        FileUtil.mergeFile(frontFile, backFile, targetFile); //合并
-
-        System.out.println("origin: " + FileUtil.getMd5(targetFile));
-
 //        FileUtil.reverseFile(targetFile); //反转
-        System.out.println("out.txt: " + FileUtil.getMd5(targetFile));
+        FileUtil.divideFile(frontFile, backFile,targetFile); //分割
 
-        FileUtil.divideFile(targetFile, frontFile, backFile); //拆分
     }
 
+    public static String getLocalFilePath(String name) {
+        String path = "";
+        try {
+            path = new File(".").getCanonicalPath() + "/src/TestBox/" + name;
+        } catch(IOException e) {
+            e.printStackTrace();
+        }
+        return path;
+    }
 }
