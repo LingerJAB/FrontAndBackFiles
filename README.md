@@ -8,14 +8,14 @@
 
 在Java源码中提供了一些方法方便调用
 
----
-`FileUtil`类 提供了以下静态方法
+## 使用方法
+`FileUtil`类 提供了以下静态方法  
 
 **主要方法**
 - `mergeFile(File, File, File)` 合并两个文件到一个文件
 - `reverseFile(File)` 反转文件字节
 - `divideFile(File, File, File)` 分割文件到两个文件
----
+
 **其它方法**
 - `printBytes(File)` 打印字节
 - `getMd5(File)` 获取文件MD5值
